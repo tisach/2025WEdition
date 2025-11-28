@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+
 # Sicherstellen, dass der results-Ordner existiert
 os.makedirs("results", exist_ok=True)
 
@@ -14,12 +15,13 @@ def lade_csv(pfad: str) -> np.ndarray:
     """
     Lädt die Messwerte aus einer CSV-Datei.
     Erwartet eine Spalte 'latenz_ns'.
+    Gibt ein NumPy-Array in Nanosekunden zurück.
     """
     try:
         df = pd.read_csv(pfad)
         if "latenz_ns" not in df.columns:
-            raise ValueError("Spalte 'latenz_ns' nicht gefunden")
-        return df["latenz_ns"].values
+            raise ValueError("Spalte 'latenz_ns' nicht gefunden.")
+        return df["latenz_ns"].values.astype(float)
     except FileNotFoundError:
         print(f"Fehler: Datei '{pfad}' nicht gefunden.")
         sys.exit(1)
@@ -28,24 +30,28 @@ def lade_csv(pfad: str) -> np.ndarray:
         sys.exit(1)
 
 
-def berechne_statistik(daten: np.ndarray) -> None:
+def berechne_statistik(daten_ns: np.ndarray) -> None:
     """
     Berechnet und gibt grundlegende statistische Größen aus.
+    Arbeitet intern in Mikrosekunden (µs).
     """
-    n = len(daten)
-    if n == 0:
+    if len(daten_ns) == 0:
         print("Keine Daten vorhanden.")
         return
 
-    daten_min = float(np.min(daten))
-    daten_max = float(np.max(daten))
-    mean = float(np.mean(daten))
-    median = float(np.median(daten))
-    std = float(np.std(daten, ddof=1))  # Stichproben-Standardabweichung
+    daten_us = daten_ns / 1000.0  # von ns -> µs
 
-    # Perzentile
-    p95 = float(np.percentile(daten, 95))
-    p99 = float(np.percentile(daten, 99))
+    n = len(daten_us)
+    daten_min = float(np.min(daten_us))
+    daten_max = float(np.max(daten_us))
+    mean = float(np.mean(daten_us))
+    median = float(np.median(daten_us))
+    std = float(np.std(daten_us, ddof=1))  # Stichproben-Standardabweichung
+
+    # Quantile
+    p90 = float(np.percentile(daten_us, 90))
+    p95 = float(np.percentile(daten_us, 95))
+    p99 = float(np.percentile(daten_us, 99))
 
     # 95%-Konfidenzintervall für den Mittelwert
     z = 1.96
@@ -53,172 +59,184 @@ def berechne_statistik(daten: np.ndarray) -> None:
     ci_unten = mean - halbweite
     ci_oben = mean + halbweite
 
-    print("=" * 60)
-    print("Statistik für die Pipe-Verweildauer (Einweg)")
-    print("=" * 60)
+    print("=" * 70)
+    print("Statistik für die Pipe-Verweildauer (Einweg) [µs]")
+    print("=" * 70)
     print(f"Anzahl Messwerte       : {n}")
-    print(f"Minimum                : {daten_min:.2f} ns")
-    print(f"Maximum                : {daten_max:.2f} ns")
-    print(f"Mittelwert             : {mean:.2f} ns")
-    print(f"Median                 : {median:.2f} ns")
-    print(f"Standardabweichung     : {std:.2f} ns")
-    print(f"95. Perzentil          : {p95:.2f} ns")
-    print(f"99. Perzentil          : {p99:.2f} ns")
-    print(f"95% Konfidenzintervall : [{ci_unten:.2f}, {ci_oben:.2f}] ns")
-    print("=" * 60)
+    print(f"Minimum                : {daten_min:.3f} µs")
+    print(f"Maximum                : {daten_max:.3f} µs")
+    print(f"Mittelwert             : {mean:.3f} µs")
+    print(f"Median                 : {median:.3f} µs")
+    print(f"Standardabweichung     : {std:.3f} µs")
+    print(f"90. Perzentil          : {p90:.3f} µs")
+    print(f"95. Perzentil          : {p95:.3f} µs")
+    print(f"99. Perzentil          : {p99:.3f} µs")
+    print(f"95% Konfidenzintervall : [{ci_unten:.3f}, {ci_oben:.3f}] µs")
+    print("=" * 70)
 
 
-def zeichne_histogramm(daten: np.ndarray, dateiname: str) -> None:
+def zeichne_histogramm(daten_ns: np.ndarray, dateiname: str, x_max_us: float | None = None) -> None:
     """
-    Zeichnet ein Histogramm der Latenzen und speichert es als PNG.
+    Zeichnet ein Histogramm der Latenzen (in µs) und speichert es als PNG.
+    Optional kann die x-Achse auf x_max_us begrenzt werden.
     """
-    plt.figure(figsize=(10, 6))
-    plt.hist(daten, bins=50, edgecolor='black', linewidth=0.5, alpha=0.7)
-    plt.xlabel("Verweildauer in der Pipe (ns)", fontsize=12)
-    plt.ylabel("Häufigkeit", fontsize=12)
-    plt.title("Histogramm der Pipe-Verweildauer (Einweg)", fontsize=14, fontweight='bold')
+    daten_us = daten_ns / 1000.0
+
+    plt.figure(figsize=(8, 5))
+    plt.hist(daten_us, bins=50, edgecolor="black", linewidth=0.5)
+    plt.xlabel("Verweildauer in der Pipe (µs)")
+    plt.ylabel("Häufigkeit")
+    plt.title("Histogramm der Pipe-Verweildauer (Einweg)")
+    if x_max_us is not None:
+        plt.xlim(0, x_max_us)
     plt.grid(True, linewidth=0.3, alpha=0.5)
     plt.tight_layout()
     plt.savefig(dateiname, dpi=300)
     plt.close()
-    print(f"  ✓ {dateiname}")
+    print(f"  {dateiname}")
 
 
-def zeichne_histogramm_log(daten: np.ndarray, dateiname: str) -> None:
+def zeichne_histogramm_log(daten_ns: np.ndarray, dateiname: str) -> None:
     """
-    Histogramm mit logarithmischer y-Achse, um Ausreißer besser zu sehen.
+    Histogramm mit logarithmischer y-Achse (in µs), um seltene Ausreißer sichtbar zu machen.
     """
-    plt.figure(figsize=(10, 6))
-    plt.hist(daten, bins=50, edgecolor='black', linewidth=0.5, alpha=0.7)
+    daten_us = daten_ns / 1000.0
+
+    plt.figure(figsize=(8, 5))
+    plt.hist(daten_us, bins=50, edgecolor="black", linewidth=0.5)
     plt.yscale("log")
-    plt.xlabel("Verweildauer in der Pipe (ns)", fontsize=12)
-    plt.ylabel("Häufigkeit (log-Skala)", fontsize=12)
-    plt.title("Histogramm (log-Skala) der Pipe-Verweildauer (Einweg)", fontsize=14, fontweight='bold')
+    plt.xlabel("Verweildauer in der Pipe (µs)")
+    plt.ylabel("Häufigkeit (log-Skala)")
+    plt.title("Histogramm der Pipe-Verweildauer (log. Skala)")
     plt.grid(True, linewidth=0.3, alpha=0.5)
     plt.tight_layout()
     plt.savefig(dateiname, dpi=300)
     plt.close()
-    print(f"  ✓ {dateiname}")
+    print(f"  {dateiname}")
 
 
-def zeichne_boxplot(daten: np.ndarray, dateiname: str) -> None:
+def zeichne_boxplot(daten_ns: np.ndarray, dateiname: str) -> None:
     """
-    Zeichnet einen Boxplot zur Verteilung der Latenzen.
+    Zeichnet einen Boxplot der Latenzen (in µs).
     """
-    plt.figure(figsize=(8, 6))
-    bp = plt.boxplot(daten, vert=True, showfliers=True, patch_artist=True)
+    daten_us = daten_ns / 1000.0
 
-    # Boxplot einfärben
-    for patch in bp['boxes']:
-        patch.set_facecolor('lightblue')
-
-    plt.ylabel("Verweildauer in der Pipe (ns)", fontsize=12)
-    plt.title("Boxplot der Pipe-Verweildauer (Einweg)", fontsize=14, fontweight='bold')
-    plt.grid(True, axis='y', linewidth=0.3, alpha=0.5)
+    plt.figure(figsize=(5, 6))
+    plt.boxplot(daten_us, vert=True, showfliers=True)
+    plt.ylabel("Verweildauer in der Pipe (µs)")
+    plt.title("Boxplot der Pipe-Verweildauer (Einweg)")
+    plt.grid(True, axis="y", linewidth=0.3, alpha=0.5)
     plt.tight_layout()
     plt.savefig(dateiname, dpi=300)
     plt.close()
-    print(f"  ✓ {dateiname}")
+    print(f"  {dateiname}")
 
 
-def zeichne_zeitreihe(daten: np.ndarray, dateiname: str) -> None:
+def zeichne_zeitreihe(daten_ns: np.ndarray, dateiname: str, y_max_us: float | None = None) -> None:
     """
-    Zeigt Latenz über Zeit - deckt Trends/Scheduler-Effekte auf.
+    Zeitreihenplot der Latenzen (in µs).
     """
-    plt.figure(figsize=(12, 5))
-    plt.plot(daten, linewidth=0.5, alpha=0.7, color='steelblue')
-    plt.xlabel("Messung Nr.", fontsize=12)
-    plt.ylabel("Verweildauer (ns)", fontsize=12)
-    plt.title("Pipe-Latenz über Zeit", fontsize=14, fontweight='bold')
+    daten_us = daten_ns / 1000.0
+
+    plt.figure(figsize=(10, 4))
+    plt.plot(daten_us, linewidth=0.5)
+    plt.xlabel("Messung Nr.")
+    plt.ylabel("Verweildauer (µs)")
+    plt.title("Pipe-Verweildauer über der Zeit")
+    if y_max_us is not None:
+        plt.ylim(0, y_max_us)
     plt.grid(True, linewidth=0.3, alpha=0.5)
     plt.tight_layout()
     plt.savefig(dateiname, dpi=300)
     plt.close()
-    print(f"  ✓ {dateiname}")
+    print(f"  {dateiname}")
 
 
-def zeichne_zeitreihe_rolling_mean(daten: np.ndarray, fenster: int, dateiname: str) -> None:
+def zeichne_scatter(daten_ns: np.ndarray, dateiname: str, y_max_us: float | None = None) -> None:
     """
-    Zeichnet gleitenden Mittelwert der Latenz über die Zeit.
-    Hilfreich, um langfristige Trends und Laständerungen zu erkennen.
+    Scatterplot: Messwert vs. Messindex (in µs).
     """
-    plt.figure(figsize=(12, 5))
-    plt.plot(daten, linewidth=0.3, alpha=0.3, label="Einzelmessungen")
+    daten_us = daten_ns / 1000.0
 
-    # Gleitender Mittelwert
-    if fenster > 1:
-        roll = pd.Series(daten).rolling(window=fenster).mean()
-        plt.plot(roll, linewidth=1.0, color="red", label=f"Gleitender Mittelwert (Fenster={fenster})")
+    plt.figure(figsize=(10, 4))
+    plt.scatter(range(len(daten_us)), daten_us, s=2, alpha=0.5)
+    plt.xlabel("Messung Nr.")
+    plt.ylabel("Verweildauer (µs)")
+    plt.title("Pipe-Verweildauer – Scatterplot")
+    if y_max_us is not None:
+        plt.ylim(0, y_max_us)
+    plt.grid(True, linewidth=0.3, alpha=0.5)
+    plt.tight_layout()
+    plt.savefig(dateiname, dpi=300)
+    plt.close()
+    print(f"  {dateiname}")
 
-    plt.xlabel("Messung Nr.", fontsize=12)
-    plt.ylabel("Verweildauer (ns)", fontsize=12)
-    plt.title("Pipe-Latenz – gleitender Mittelwert", fontsize=14, fontweight='bold')
+
+def zeichne_rolling_mean(daten_ns: np.ndarray, dateiname: str, fenster: int = 1000) -> None:
+    """
+    Zeichnet den gleitenden Mittelwert der Latenzen (in µs).
+    """
+    daten_us = daten_ns / 1000.0
+    s = pd.Series(daten_us)
+    roll = s.rolling(window=fenster).mean()
+
+    plt.figure(figsize=(10, 4))
+    plt.plot(daten_us, linewidth=0.3, alpha=0.3, label="Einzelmessungen")
+    plt.plot(roll, linewidth=1.0, label=f"Gleitender Mittelwert (Fenster={fenster})")
+    plt.xlabel("Messung Nr.")
+    plt.ylabel("Verweildauer (µs)")
+    plt.title("Pipe-Verweildauer – gleitender Mittelwert")
     plt.grid(True, linewidth=0.3, alpha=0.5)
     plt.legend()
     plt.tight_layout()
     plt.savefig(dateiname, dpi=300)
     plt.close()
-    print(f"  ✓ {dateiname}")
+    print(f"  {dateiname}")
 
 
-def zeichne_cdf(daten: np.ndarray, dateiname: str) -> None:
+def zeichne_cdf(daten_ns: np.ndarray, dateiname: str) -> None:
     """
-    Zeichnet die empirische Verteilungsfunktion (CDF) der Latenz.
-    Zeigt, wie schnell die Verteilung ansteigt und wie viele Werte
-    unterhalb eines bestimmten Schwellenwerts liegen.
+    Zeichnet die empirische Verteilungsfunktion (CDF) der Latenzen (in µs).
     """
-    sortiert = np.sort(daten)
-    n = len(sortiert)
-    y = np.arange(1, n + 1) / n  # Werte von (1/n) bis 1
+    daten_us = np.sort(daten_ns / 1000.0)
+    n = len(daten_us)
+    y = np.arange(1, n + 1) / n
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(sortiert, y, linewidth=1.0)
-    plt.xlabel("Verweildauer in der Pipe (ns)", fontsize=12)
-    plt.ylabel("Kumulative Wahrscheinlichkeit", fontsize=12)
-    plt.title("Empirische Verteilungsfunktion (CDF) der Pipe-Verweildauer", fontsize=14, fontweight='bold')
+    plt.figure(figsize=(8, 5))
+    plt.plot(daten_us, y, linewidth=1.0)
+    plt.xlabel("Verweildauer in der Pipe (µs)")
+    plt.ylabel("Kumulative Wahrscheinlichkeit")
+    plt.title("Empirische Verteilungsfunktion (CDF) der Pipe-Verweildauer")
     plt.grid(True, linewidth=0.3, alpha=0.5)
     plt.tight_layout()
     plt.savefig(dateiname, dpi=300)
     plt.close()
-    print(f"  ✓ {dateiname}")
-
-def zeichne_scatter(daten, dateiname):
-    """
-    Scatterplot: Messwert gegen Messindex.
-    Zeigt direkt die Ausreißer-Positionen (Scheduler-Interferenzen).
-    """
-    plt.figure(figsize=(12, 5))
-    plt.scatter(range(len(daten)), daten, s=2, alpha=0.6)
-    plt.xlabel("Messung Nr.")
-    plt.ylabel("Verweildauer (ns)")
-    plt.title("Pipe-Verweildauer – Scatterplot (Timing-Jitter sichtbar)")
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(dateiname, dpi=300)
-    plt.close()
-    print(f"  ✓ {dateiname}")
+    print(f"  {dateiname}")
 
 
-def zeichne_autokorrelation(daten, dateiname, max_lag=200):
+def zeichne_autokorrelation(daten_ns: np.ndarray, dateiname: str, max_lag: int = 200) -> None:
     """
-    Autokorrelation: Wie stark hängen Messwerte zeitlich zusammen?
-    Erkennt Scheduling-Cluster oder Lastphasen.
+    Autokorrelation der Latenzen (in µs).
     """
-    daten_norm = (daten - np.mean(daten)) / np.std(daten)
-    autocorr = [np.correlate(daten_norm[:-lag], daten_norm[lag:])[0] 
-                for lag in range(1, max_lag)]
+    daten_us = daten_ns / 1000.0
+    daten_norm = (daten_us - np.mean(daten_us)) / np.std(daten_us)
 
-    plt.figure(figsize=(10, 6))
-    plt.stem(range(1, max_lag), autocorr, use_line_collection=True)
-    plt.xlabel("Lag (Versatz)")
+    autocorr = []
+    for lag in range(1, max_lag):
+        v1 = daten_norm[:-lag]
+        v2 = daten_norm[lag:]
+        autocorr.append(np.correlate(v1, v2)[0] / len(v1))
+
+    plt.figure(figsize=(8, 5))
+    plt.stem(range(1, max_lag), autocorr, linefmt='-', markerfmt='o', basefmt=' ')
+    plt.xlabel("Lag")
     plt.ylabel("Autokorrelation")
     plt.title("Autokorrelation der Pipe-Verweildauer")
-    plt.grid(True, alpha=0.4)
+    plt.grid(True, linewidth=0.3, alpha=0.5)
     plt.tight_layout()
     plt.savefig(dateiname, dpi=300)
     plt.close()
-    print(f"  ✓ {dateiname}")
-
+    print(f"  {dateiname}")
 
 
 def main():
@@ -227,29 +245,27 @@ def main():
         sys.exit(1)
 
     pfad = sys.argv[1]
-    daten = lade_csv(pfad)
+    daten_ns = lade_csv(pfad)
 
-    if len(daten) == 0:
+    if len(daten_ns) == 0:
         print("Keine gültigen Messwerte gefunden.")
         sys.exit(1)
 
-    # 1. Statistik auf der Konsole ausgeben
-    berechne_statistik(daten)
-    print()
+    # 1. Statistik ausgeben
+    berechne_statistik(daten_ns)
+    print("\nErzeuge Plots...\n")
 
-    # 2. Plots erzeugen
-    print("Erzeuge Grafiken...")
-    zeichne_histogramm(daten, "results/pipe_latenz_histogramm.png")
-    zeichne_histogramm_log(daten, "results/pipe_latenz_histogramm_log.png")
-    zeichne_boxplot(daten, "results/pipe_latenz_boxplot.png")
-    zeichne_zeitreihe(daten, "results/pipe_latenz_zeitreihe.png")
-    zeichne_zeitreihe_rolling_mean(daten, fenster=1000, dateiname="results/pipe_latenz_rolling_mean.png")
-    zeichne_cdf(daten, "results/pipe_latenz_cdf.png")
-    zeichne_scatter(daten, "results/pipe_latenz_scatter.png")
-    zeichne_autokorrelation(daten, "results/pipe_latenz_autocorr.png")
+    # 2. Plots erzeugen (alle in µs beschriftet)
+    zeichne_histogramm(daten_ns, "results/pipe_latenz_histogramm.png", x_max_us=200.0)
+    zeichne_histogramm_log(daten_ns, "results/pipe_latenz_histogramm_log.png")
+    zeichne_boxplot(daten_ns, "results/pipe_latenz_boxplot.png")
+    zeichne_cdf(daten_ns, "results/pipe_latenz_cdf.png")
+    zeichne_zeitreihe(daten_ns, "results/pipe_latenz_zeitreihe.png", y_max_us=250.0)
+    zeichne_scatter(daten_ns, "results/pipe_latenz_scatter.png", y_max_us=250.0)
+    zeichne_rolling_mean(daten_ns, "results/pipe_latenz_rolling_mean.png", fenster=1000)
+    zeichne_autokorrelation(daten_ns, "results/pipe_latenz_autocorr.png", max_lag=200)
 
-
-    print("\n✅ Analyse abgeschlossen!")
+    print("\nFertig. Plots wurden in 'results/' gespeichert.")
 
 
 if __name__ == "__main__":

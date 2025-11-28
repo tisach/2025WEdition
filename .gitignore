@@ -43,6 +43,8 @@
 # JetBrains IDE
 .idea/
 
+.vscode/
+
 # Build directories
 *.build/
 
