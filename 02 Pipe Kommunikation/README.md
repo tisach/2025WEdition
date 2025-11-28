@@ -6,7 +6,7 @@ Dabei wird ein Parent- und ein Child-Prozess per `fork()` erzeugt und eine Nachr
 per Ping-Pong über zwei Pipes übertragen. Die Round-Trip-Zeit wird gemessen und 
 halbiert, um die Einweg-Verweildauer einer Nachricht im Kernel zu bestimmen.
 
----
+```
 
 ## 📂 Ordnerstruktur
 
@@ -60,7 +60,7 @@ results/pipe_latenz.csv
 python3 messwerte_analyse.py results/pipe_latenz.csv
 ```
 
-Dabei entstehen:
+Dabei entstehen u. a.:
 
 | Datei                            | Inhalt                                 |
 | -------------------------------- | -------------------------------------- |
@@ -73,7 +73,7 @@ Dabei entstehen:
 | `pipe_latenz_rolling_mean.png`   | Systemtrends                           |
 | `pipe_latenz_autocorr.png`       | Clusterbildung / temporale Korrelation |
 
-Zusätzlich werden die statistische Kennzahlen in der Konsole ausgegeben:
+Zusätzlich werden statistische Kennzahlen in der Konsole ausgegeben:
 
 * Mittelwert
 * Minimum / Maximum
