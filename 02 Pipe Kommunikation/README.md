@@ -8,7 +8,7 @@ halbiert, um die Einweg-Verweildauer einer Nachricht im Kernel zu bestimmen.
 
 ```
 
-## 📂 Ordnerstruktur
+## Ordnerstruktur
 
 ```
 
