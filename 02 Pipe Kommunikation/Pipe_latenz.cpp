@@ -1,22 +1,32 @@
 #include <chrono>
 #include <fstream>
 #include <iostream>
-#include <algorithm>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#include <vector>
 
-int main(int argc, char* argv[]) {
-    long iterations = 100000;  // Standardwert
+#include <unistd.h>      // pipe, fork, read, write, close
+#include <sys/types.h>   // pid_t
+#include <sys/wait.h>    // waitpid
+#include <sys/stat.h>    // mkdir
+
+
+int main(int argc, char* argv[])
+{
+    // -------- Parameter: Anzahl der Messwerte --------
+    long iterations = 200000;     // Standard: 200k Messungen
 
     if (argc > 1) {
-        iterations = std::stol(argv[1]);
+        try {
+            iterations = std::stol(argv[1]);
+        } catch (...) {
+            std::cerr << "Ungueltiger Parameter, verwende Standard: "
+                      << iterations << "\n";
+        }
     }
 
-    // Warmup-Iterationen: mindestens 1000 oder 10% der Gesamtiterationen
-    long warmup = std::min<long>(1000, iterations / 10);
-    long total_child_iterations = warmup + iterations;
+    // Warmup: erste Messungen zum „Einpendeln“ des Systems
+    long warmup = std::min(1000L, iterations / 10);
 
+    // -------- Pipes anlegen --------
     int parent_to_child[2];
     int child_to_parent[2];
 
@@ -29,6 +39,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // -------- fork: Parent / Child --------
     pid_t pid = fork();
     if (pid < 0) {
         perror("fork");
@@ -38,16 +49,16 @@ int main(int argc, char* argv[]) {
     const char ping = 'X';
     char buf;
 
-    using clock = std::chrono::high_resolution_clock;
+    using clock = std::chrono::steady_clock;      // monotone Uhr!
     using ns    = std::chrono::nanoseconds;
 
     if (pid == 0) {
-        // ---------------- Kindprozess ----------------
-        close(parent_to_child[1]);  // Kind liest nur
-        close(child_to_parent[0]);  // Kind schreibt nur
+        // ==================== Kindprozess ====================
+        close(parent_to_child[1]);   // Kind liest nur
+        close(child_to_parent[0]);   // Kind schreibt nur
 
-        // Warmup + eigentliche Messungen
-        for (long i = 0; i < total_child_iterations; ++i) {
+        long total = warmup + iterations;
+        for (long i = 0; i < total; ++i) {
             ssize_t r = read(parent_to_child[0], &buf, 1);
             if (r != 1) {
                 if (r < 0) perror("child read");
@@ -65,61 +76,61 @@ int main(int argc, char* argv[]) {
         _exit(0);
     }
 
-    // --------------- Elternprozess ----------------
-    close(parent_to_child[0]);
-    close(child_to_parent[1]);
+    // ==================== Elternprozess ====================
+    close(parent_to_child[0]);   // Parent schreibt nur
+    close(child_to_parent[1]);   // Parent liest nur
 
-    // Warmup-Phase (OHNE Messung/Speicherung)
-    std::cout << "Führe Warmup durch (" << warmup << " Iterationen)...\n";
+    // results/ anlegen (falls nicht vorhanden)
+    mkdir("results", 0777);
+
+    std::ofstream csv("results/pipe_latenz.csv");
+    if (!csv) {
+        std::cerr << "Konnte results/pipe_latenz.csv nicht oeffnen.\n";
+        return 1;
+    }
+    csv << "latenz_ns\n";
+
+    // -------- Warmup (ohne Zeitmessung) --------
     for (long i = 0; i < warmup; ++i) {
         if (write(parent_to_child[1], &ping, 1) != 1) {
             perror("warmup write");
-            goto cleanup;
+            break;
         }
         if (read(child_to_parent[0], &buf, 1) != 1) {
             perror("warmup read");
-            goto cleanup;
+            break;
         }
     }
 
-    // CSV-Datei öffnen
-    {
-        std::ofstream csv("pipe_latenz.csv");
-        if (!csv.is_open()) {
-            std::cerr << "Fehler beim Öffnen der CSV-Datei\n";
-            goto cleanup;
+    // -------- eigentliche Messung --------
+    for (long i = 0; i < iterations; ++i) {
+        auto t0 = clock::now();
+
+        if (write(parent_to_child[1], &ping, 1) != 1) {
+            perror("write");
+            break;
+        }
+        if (read(child_to_parent[0], &buf, 1) != 1) {
+            perror("read");
+            break;
         }
 
-        csv << "latenz_ns\n";  // Header der CSV
+        auto t1 = clock::now();
 
-        std::cout << "Starte Messungen (" << iterations << " Iterationen)...\n";
+        ns diff = std::chrono::duration_cast<ns>(t1 - t0);
 
-        // Eigentliche Messungen
-        for (long i = 0; i < iterations; ++i) {
-            auto t0 = clock::now();
-
-            if (write(parent_to_child[1], &ping, 1) != 1) {
-                perror("write");
-                break;
-            }
-            if (read(child_to_parent[0], &buf, 1) != 1) {
-                perror("read");
-                break;
-            }
-
-            auto t1 = clock::now();
-
-            ns diff = std::chrono::duration_cast<ns>(t1 - t0);
-            double one_way = diff.count() / 2.0;
-
-            csv << one_way << "\n";
+        // Sicherheit: nur positive/vernünftige Werte speichern
+        if (diff.count() <= 0) {
+            // überspringen, falls aus irgendeinem Grund 0 oder negativ
+            continue;
         }
 
-        csv.close();
-        std::cout << "Messungen abgeschlossen. Daten in pipe_latenz.csv gespeichert.\n";
+        double one_way_ns = diff.count() / 2.0;   // Round-Trip -> Einweg
+        csv << one_way_ns << "\n";
     }
 
-cleanup:
+    csv.close();
+
     close(parent_to_child[1]);
     close(child_to_parent[0]);
 
