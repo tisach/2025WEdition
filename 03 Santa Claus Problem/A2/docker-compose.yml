@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  santa:
+    build: .
+    command: python -u santa.py
+    ports:
+      - "5555:5555"
+    networks:
+      - northpole
+
+  rentier:
+    build: .
+    command: python -u rentier.py
+    deploy:
+      replicas: 9
+    depends_on:
+      - santa
+    networks:
+      - northpole
+
+  elf:
+    build: .
+    command: python -u elf.py
+    deploy:
+      replicas: 10
+    depends_on:
+      - santa
+    networks:
+      - northpole
+
+networks:
+  northpole:
