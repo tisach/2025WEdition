@@ -16,7 +16,7 @@ Der Code ist hier auf mehrere Dateien aufgeteilt:
 * `docker-compose.yml` (Orchestrierung)
 
 
-## 🚀 Starten der Anwendung
+## Starten der Anwendung
 
 ### Zu Aufgabe 2 (Docker)
 Startet die Container-Umgebung (1 Santa, 9 Rentiere, 10 Elfen):
