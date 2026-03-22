@@ -8,7 +8,7 @@ Dieses Repository enthält die Implementierungen und Experimente zu Übungsblatt
 
 | Aufgabe | Beschreibung | Datei |
 |---------|-------------|-------|
-| 1 | Datensicherung und -archivierung mit ZFS-Snapshots | `src/aufgabe1_backup.py` |
+| 1 | Datensicherung und -archivierung mit ZFS-Snapshots | `src/aufgabe1_zfs_backup.py` |
 | 2 | Datei-Inkonsistenzen trotz ZFS-Snapshots | `src/aufgabe2_inconsistency_experiment.py` |
 | 3 | Datensicherheit mit RAID-Z | `src/aufgabe3_raidz_experiment.py` |
 | 4 | Zugriffsperformanz ZFS vs. ext4 | `src/aufgabe4_benchmark.py` |
@@ -50,7 +50,7 @@ sudo mkdir -p /mnt/backups
 
 ```bash
 # Aufgabe 1: Backup-Programm
-sudo python3 src/aufgabe1_backup.py --source mypool/daten --dest /mnt/backups --max-backups 3
+sudo python3 src/aufgabe1_zfs_backup.py --source mypool/daten --dest /mnt/backups --max-backups 3
 
 # Aufgabe 2: Inkonsistenz-Experiment
 sudo python3 src/aufgabe2_inconsistency_experiment.py
@@ -73,13 +73,13 @@ Das Backup-Programm nutzt ZFS-Snapshots (`zfs snapshot -r`) und `zfs send`/`rece
 
 ```bash
 # Mit Konfigurationsdatei
-sudo python3 src/aufgabe1_backup.py --config config/backup_config.json
+sudo python3 src/aufgabe1_zfs_backup.py --config config/backup_config.json
 
 # Mit Intervall (alle 60 Sekunden)
-sudo python3 src/aufgabe1_backup.py --source mypool/daten --dest /mnt/backups --max-backups 5 --interval 60
+sudo python3 src/aufgabe1_zfs_backup.py --source mypool/daten --dest /mnt/backups --max-backups 5 --interval 60
 
 # Beispiel-Konfiguration erzeugen
-python3 src/aufgabe1_backup.py --generate-config config/my_config.json
+python3 src/aufgabe1_zfs_backup.py --generate-config config/my_config.json
 ```
 
 ## Aufgabe 2: Inkonsistenz-Experiment
