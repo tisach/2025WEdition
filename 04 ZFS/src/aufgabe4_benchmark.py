@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 """
-ZFS vs ext4 Performance-Benchmark
-===================================
-Betriebssysteme, Übungsblatt 3 – Aufgabe 4
-Universität Trier, Winter 2025
 
-Vergleicht die Zugriffsperformanz von ZFS und ext4 mit verschiedenen
 Benchmark-Tests:
   1. Sequentielles Schreiben (große Datei)
   2. Sequentielles Lesen (große Datei)
@@ -19,7 +14,7 @@ Voraussetzungen:
   - Root-Rechte (sudo)
 
 Verwendung:
-  sudo python3 benchmark.py
+  sudo python3 aufgabe4_benchmark.py
 """
 
 import subprocess
@@ -56,7 +51,6 @@ REPEAT_COUNT = 3             # Wiederholungen pro Test
 # Hilfsfunktionen
 # ---------------------------------------------------------------------------
 def run_cmd(cmd, check=True, silent=False):
-    """Führt einen Befehl aus."""
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if check and result.returncode != 0 and not silent:
         print(f"  FEHLER: {' '.join(cmd)}")
@@ -65,7 +59,6 @@ def run_cmd(cmd, check=True, silent=False):
 
 
 def drop_caches():
-    """Leert den Dateisystem-Cache für faire Messungen."""
     run_cmd(["sync"])
     with open("/proc/sys/vm/drop_caches", "w") as f:
         f.write("3")
@@ -73,7 +66,6 @@ def drop_caches():
 
 
 def format_speed(mb_per_sec):
-    """Formatiert Geschwindigkeit."""
     if mb_per_sec >= 1:
         return f"{mb_per_sec:.1f} MB/s"
     else:
@@ -81,7 +73,6 @@ def format_speed(mb_per_sec):
 
 
 def format_ops(ops_per_sec):
-    """Formatiert Operationen pro Sekunde."""
     return f"{ops_per_sec:.0f} ops/s"
 
 
@@ -91,11 +82,8 @@ def print_header(title):
     print(f"{'=' * 65}")
 
 
-# ---------------------------------------------------------------------------
 # Setup: Dateisysteme vorbereiten
-# ---------------------------------------------------------------------------
 def setup_filesystems():
-    """Richtet ZFS und ext4 Dateisysteme ein."""
     print_header("Setup: Dateisysteme vorbereiten")
 
     # ZFS Dataset erstellen
@@ -123,20 +111,13 @@ def setup_filesystems():
 
 
 def cleanup_filesystems():
-    """Räumt auf."""
     print("\nAufräumen...")
     run_cmd(["zfs", "destroy", "-r", ZFS_DATASET], check=False, silent=True)
     run_cmd(["umount", EXT4_MOUNT], check=False, silent=True)
 
 
-# ---------------------------------------------------------------------------
 # Benchmark-Tests
-# ---------------------------------------------------------------------------
 def bench_sequential_write(mount_point, file_size_mb, block_size_kb):
-    """
-    Sequentielles Schreiben: Schreibt eine große Datei blockweise.
-    Misst den Durchsatz in MB/s.
-    """
     filepath = os.path.join(mount_point, "seq_write_test.bin")
     block_size = block_size_kb * 1024
     total_blocks = (file_size_mb * 1024 * 1024) // block_size
@@ -160,10 +141,6 @@ def bench_sequential_write(mount_point, file_size_mb, block_size_kb):
 
 
 def bench_sequential_read(mount_point, file_size_mb, block_size_kb):
-    """
-    Sequentielles Lesen: Liest eine große Datei blockweise.
-    Misst den Durchsatz in MB/s.
-    """
     filepath = os.path.join(mount_point, "seq_read_test.bin")
     block_size = block_size_kb * 1024
     total_blocks = (file_size_mb * 1024 * 1024) // block_size
@@ -193,10 +170,7 @@ def bench_sequential_read(mount_point, file_size_mb, block_size_kb):
 
 
 def bench_random_write(mount_point, file_count, file_size_kb):
-    """
-    Zufälliges Schreiben: Erstellt viele kleine Dateien.
-    Misst Operationen pro Sekunde.
-    """
+
     test_dir = os.path.join(mount_point, "random_write")
     os.makedirs(test_dir, exist_ok=True)
     data = os.urandom(file_size_kb * 1024)
@@ -223,10 +197,7 @@ def bench_random_write(mount_point, file_count, file_size_kb):
 
 
 def bench_random_read(mount_point, file_count, file_size_kb):
-    """
-    Zufälliges Lesen: Liest viele kleine Dateien in zufälliger Reihenfolge.
-    Misst Operationen pro Sekunde.
-    """
+ 
     test_dir = os.path.join(mount_point, "random_read")
     os.makedirs(test_dir, exist_ok=True)
     data = os.urandom(file_size_kb * 1024)
@@ -261,10 +232,7 @@ def bench_random_read(mount_point, file_count, file_size_kb):
 
 
 def bench_metadata(mount_point, file_count):
-    """
-    Metadaten-Performance: Erstellt und löscht viele leere Dateien.
-    Misst Operationen pro Sekunde.
-    """
+
     test_dir = os.path.join(mount_point, "metadata_test")
     os.makedirs(test_dir, exist_ok=True)
 
@@ -293,11 +261,8 @@ def bench_metadata(mount_point, file_count):
     return create_ops, delete_ops, elapsed_create, elapsed_delete
 
 
-# ---------------------------------------------------------------------------
 # Benchmark-Runner
-# ---------------------------------------------------------------------------
 def run_benchmark(name, bench_func, *args):
-    """Führt einen Benchmark mehrmals aus und berechnet den Durchschnitt."""
     results = []
     for i in range(REPEAT_COUNT):
         result = bench_func(*args)
@@ -306,16 +271,13 @@ def run_benchmark(name, bench_func, *args):
 
 
 def average(values):
-    """Berechnet den Durchschnitt."""
     return sum(values) / len(values)
 
 
-# ---------------------------------------------------------------------------
 # Hauptprogramm
-# ---------------------------------------------------------------------------
 def main():
     if os.geteuid() != 0:
-        print("Bitte mit sudo ausführen: sudo python3 benchmark.py")
+        print("Bitte mit sudo ausführen: sudo python3 aufgabe4_benchmark.py")
         sys.exit(1)
 
     print_header("ZFS vs ext4 Performance-Benchmark")
@@ -333,9 +295,7 @@ def main():
         "ext4": {},
     }
 
-    # ===================================================================
     # Test 1: Sequentielles Schreiben
-    # ===================================================================
     print_header("Test 1: Sequentielles Schreiben")
 
     for fs_name, mount in [("zfs", ZFS_MOUNT), ("ext4", EXT4_MOUNT)]:
@@ -348,9 +308,7 @@ def main():
             print(f"    Lauf {i+1}: {format_speed(speed)} ({elapsed:.2f}s)")
         print(f"    Durchschnitt: {format_speed(avg_speed)}")
 
-    # ===================================================================
     # Test 2: Sequentielles Lesen
-    # ===================================================================
     print_header("Test 2: Sequentielles Lesen")
 
     for fs_name, mount in [("zfs", ZFS_MOUNT), ("ext4", EXT4_MOUNT)]:
@@ -363,9 +321,7 @@ def main():
             print(f"    Lauf {i+1}: {format_speed(speed)} ({elapsed:.2f}s)")
         print(f"    Durchschnitt: {format_speed(avg_speed)}")
 
-    # ===================================================================
     # Test 3: Zufälliges Schreiben
-    # ===================================================================
     print_header("Test 3: Zufälliges Schreiben (viele kleine Dateien)")
 
     for fs_name, mount in [("zfs", ZFS_MOUNT), ("ext4", EXT4_MOUNT)]:
@@ -378,9 +334,7 @@ def main():
             print(f"    Lauf {i+1}: {format_ops(op)} ({elapsed:.2f}s)")
         print(f"    Durchschnitt: {format_ops(avg_ops)}")
 
-    # ===================================================================
     # Test 4: Zufälliges Lesen
-    # ===================================================================
     print_header("Test 4: Zufälliges Lesen (viele kleine Dateien)")
 
     for fs_name, mount in [("zfs", ZFS_MOUNT), ("ext4", EXT4_MOUNT)]:
@@ -393,9 +347,7 @@ def main():
             print(f"    Lauf {i+1}: {format_ops(op)} ({elapsed:.2f}s)")
         print(f"    Durchschnitt: {format_ops(avg_ops)}")
 
-    # ===================================================================
     # Test 5: Metadaten-Performance
-    # ===================================================================
     print_header("Test 5: Metadaten-Performance (Dateien erstellen/löschen)")
 
     for fs_name, mount in [("zfs", ZFS_MOUNT), ("ext4", EXT4_MOUNT)]:
@@ -411,9 +363,7 @@ def main():
             print(f"    Lauf {i+1}: Erstellen {format_ops(cop)}, Löschen {format_ops(dop)}")
         print(f"    Durchschnitt: Erstellen {format_ops(avg_create)}, Löschen {format_ops(avg_delete)}")
 
-    # ===================================================================
     # Ergebnistabelle
-    # ===================================================================
     print_header("ERGEBNISÜBERSICHT: ZFS vs ext4")
 
     print(f"\n  {'Test':<30} {'ZFS':>15} {'ext4':>15} {'Vergleich':>15}")

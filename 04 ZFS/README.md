@@ -9,8 +9,8 @@ Dieses Repository enthält die Implementierungen und Experimente zu Übungsblatt
 | Aufgabe | Beschreibung | Datei |
 |---------|-------------|-------|
 | 1 | Datensicherung und -archivierung mit ZFS-Snapshots | `src/aufgabe1_backup.py` |
-| 2 | Datei-Inkonsistenzen trotz ZFS-Snapshots | `src/aufgabe2_inkonsistenz.py` |
-| 3 | Datensicherheit mit RAID-Z | `src/aufgabe3_raidz.py` |
+| 2 | Datei-Inkonsistenzen trotz ZFS-Snapshots | `src/aufgabe2_inconsistency_experiment.py` |
+| 3 | Datensicherheit mit RAID-Z | `src/aufgabe3_raidz_experiment.py` |
 | 4 | Zugriffsperformanz ZFS vs. ext4 | `src/aufgabe4_benchmark.py` |
 
 ## Voraussetzungen
@@ -53,10 +53,10 @@ sudo mkdir -p /mnt/backups
 sudo python3 src/aufgabe1_backup.py --source mypool/daten --dest /mnt/backups --max-backups 3
 
 # Aufgabe 2: Inkonsistenz-Experiment
-sudo python3 src/aufgabe2_inkonsistenz.py
+sudo python3 src/aufgabe2_inconsistency_experiment.py
 
 # Aufgabe 3: RAID-Z Experiment (nutzt /dev/sdc, /dev/sdd, /dev/sde)
-sudo python3 src/aufgabe3_raidz.py
+sudo python3 src/aufgabe3_raidz_experiment.py
 
 # Aufgabe 4: Performance-Benchmark (nutzt /dev/sdb für ZFS, /dev/sdf für ext4)
 sudo python3 src/aufgabe4_benchmark.py

@@ -1,19 +1,11 @@
 #!/usr/bin/env python3
 """
-Ablauf:
-  1. Ein Writer-Prozess schreibt langsam 10 nummerierte Blöcke in eine Datei
-  2. Während des Schreibens wird ein Snapshot erstellt
-  3. Die Datei im Snapshot wird mit der fertigen Datei verglichen
-  → Die Snapshot-Datei ist unvollständig (inkonsistent)
-
-Zusätzlich wird gezeigt, wie man mit fsfreeze das Problem beheben kann.
-
 Voraussetzungen:
   - ZFS-Pool "mypool" mit Dataset "mypool/daten" muss existieren
   - Root-Rechte (sudo)
 
 Verwendung:
-  sudo python3 inkonsistenz_experiment.py
+  sudo python3 aufgabe2_inconsistency_experiment.py
 """
 
 import subprocess
@@ -145,11 +137,11 @@ def experiment_inkonsistenz():
     print(f"   Snapshot:  {len(snap_lines)} Blöcke", end="")
 
     if len(snap_lines) < len(original_lines):
-        print(f" → INKONSISTENT! Es fehlen {len(original_lines) - len(snap_lines)} Blöcke")
+        print(f" -> INKONSISTENT! Es fehlen {len(original_lines) - len(snap_lines)} Blöcke")
     elif len(snap_lines) == 0:
-        print(" → INKONSISTENT! Datei ist leer im Snapshot")
+        print(" -> INKONSISTENT! Datei ist leer im Snapshot")
     else:
-        print(" → Vollständig (Timing war zu langsam, nochmal versuchen)")
+        print(" -> Vollständig (Timing war zu langsam, nochmal versuchen)")
 
     print(f"\n   Inhalt im Snapshot:")
     if snap_lines:
@@ -224,7 +216,7 @@ def experiment_konsistenz():
 # Hauptprogramm
 def main():
     if os.geteuid() != 0:
-        print("Bitte mit sudo ausführen: sudo python3 inkonsistenz_experiment.py")
+        print("Bitte mit sudo ausführen: sudo python3 aufgabe2_inconsistency_experiment.py")
         sys.exit(1)
 
     print("ZFS Inkonsistenz-Experiment")
@@ -246,9 +238,9 @@ def main():
 
     print("\nExperiment abgeschlossen!")
     if inkonsistent:
-        print("→ Inkonsistenz wurde erfolgreich demonstriert.")
+        print("-> Inkonsistenz wurde erfolgreich demonstriert.")
     else:
-        print("→ Inkonsistenz konnte nicht gezeigt werden (Timing). Nochmal versuchen!")
+        print("-> Inkonsistenz konnte nicht gezeigt werden (Timing). Nochmal versuchen!")
 
 
 if __name__ == "__main__":

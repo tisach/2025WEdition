@@ -7,9 +7,9 @@ Voraussetzungen:
   - Ein ZFS-Pool muss bereits existieren (z.B. "mypool")
 
 Verwendung:
-  sudo python3 zfs_backup.py                     # Einmaliges Backup
-  sudo python3 zfs_backup.py --interval 3600      # Backup jede Stunde
-  sudo python3 zfs_backup.py --config backup.json  # Mit Konfigurationsdatei
+  sudo python3 aufgabe1_zfs_backup.py                     # Einmaliges Backup
+  sudo python3 aufgabe1_zfs_backup.py --interval 3600      # Backup jede Stunde
+  sudo python3 aufgabe1_zfs_backup.py --config backup.json  # Mit Konfigurationsdatei
 
 """
 
@@ -204,7 +204,6 @@ def perform_backup(config: dict):
 
 # Konfiguration laden
 def load_config(config_path: str | None) -> dict:
-    """Lädt Konfiguration aus JSON-Datei oder verwendet Standardwerte."""
     config = DEFAULT_CONFIG.copy()
 
     if config_path and Path(config_path).exists():
@@ -220,7 +219,6 @@ def load_config(config_path: str | None) -> dict:
 
 # Beispiel-Konfigurationsdatei erzeugen
 def generate_example_config(path: str):
-    """Erzeugt eine Beispiel-Konfigurationsdatei."""
     with open(path, "w") as f:
         json.dump(DEFAULT_CONFIG, f, indent=4)
     log.info("Beispiel-Konfiguration geschrieben nach: %s", path)
@@ -233,10 +231,10 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\
 Beispiele:
-  sudo python3 zfs_backup.py                          # Einmaliges Backup
-  sudo python3 zfs_backup.py --interval 3600           # Jede Stunde
-  sudo python3 zfs_backup.py --config backup.json      # Mit Konfiguration
-  sudo python3 zfs_backup.py --generate-config cfg.json # Beispiel-Config erzeugen
+  sudo python3 aufgabe1_zfs_backup.py                          # Einmaliges Backup
+  sudo python3 aufgabe1_zfs_backup.py --interval 3600           # Jede Stunde
+  sudo python3 aufgabe1_zfs_backup.py --config backup.json      # Mit Konfiguration
+  sudo python3 aufgabe1_zfs_backup.py --generate-config cfg.json # Beispiel-Config erzeugen
 
 Setup (einmalig):
   sudo zpool create mypool /dev/sdX
