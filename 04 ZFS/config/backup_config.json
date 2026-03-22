@@ -1,0 +1,7 @@
+{
+    "source_dataset": "mypool/daten",
+    "backup_location": "/mnt/backups",
+    "max_backups": 5,
+    "interval_seconds": 0,
+    "use_incremental": true
+}
